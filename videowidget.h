@@ -10,7 +10,7 @@ class VideoWidget : public QVideoWidget
 {
     Q_OBJECT
 public:
-    VideoWidget(QWidget *parent = nullptr);
+    explicit VideoWidget(QWidget *parent = nullptr);
 signals:
     void pauseRequestInFullscreenMode();
     void volumeLevelChanged(int vol);

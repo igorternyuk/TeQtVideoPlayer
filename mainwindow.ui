@@ -36,9 +36,20 @@
     <addaction name="actionPlay"/>
     <addaction name="actionPause"/>
     <addaction name="actionStop"/>
+    <addaction name="action_seek_backwards"/>
+    <addaction name="action_seek_forwards"/>
+   </widget>
+   <widget class="QMenu" name="menuPlaylist">
+    <property name="title">
+     <string>Playlist</string>
+    </property>
+    <addaction name="action_show_playlist"/>
+    <addaction name="action_prev"/>
+    <addaction name="action_next"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuVideo"/>
+   <addaction name="menuPlaylist"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
    <attribute name="toolBarArea">
@@ -52,6 +63,12 @@
    <addaction name="actionPlay"/>
    <addaction name="actionPause"/>
    <addaction name="actionStop"/>
+   <addaction name="action_seek_backwards"/>
+   <addaction name="action_seek_forwards"/>
+   <addaction name="separator"/>
+   <addaction name="action_show_playlist"/>
+   <addaction name="action_prev"/>
+   <addaction name="action_next"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <action name="actionOpen">
@@ -94,6 +111,54 @@
    </property>
    <property name="text">
     <string>stop</string>
+   </property>
+  </action>
+  <action name="action_show_playlist">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/gfx/icons/btnPlaylist.png</normaloff>:/gfx/icons/btnPlaylist.png</iconset>
+   </property>
+   <property name="text">
+    <string>Show playlist</string>
+   </property>
+   <property name="toolTip">
+    <string>Show playlist</string>
+   </property>
+  </action>
+  <action name="action_prev">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/gfx/icons/btnSeekBackward.png</normaloff>:/gfx/icons/btnSeekBackward.png</iconset>
+   </property>
+   <property name="text">
+    <string>Previous</string>
+   </property>
+  </action>
+  <action name="action_next">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/gfx/icons/btnSeekForward.png</normaloff>:/gfx/icons/btnSeekForward.png</iconset>
+   </property>
+   <property name="text">
+    <string>Next</string>
+   </property>
+  </action>
+  <action name="action_seek_forwards">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/gfx/icons/btnFaster.png</normaloff>:/gfx/icons/btnFaster.png</iconset>
+   </property>
+   <property name="text">
+    <string>Seek forwards</string>
+   </property>
+  </action>
+  <action name="action_seek_backwards">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/gfx/icons/btnSlower.png</normaloff>:/gfx/icons/btnSlower.png</iconset>
+   </property>
+   <property name="text">
+    <string>Seek backwards</string>
    </property>
   </action>
  </widget>

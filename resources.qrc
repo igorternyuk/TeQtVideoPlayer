@@ -10,5 +10,6 @@
         <file>icons/btnGo.png</file>
         <file>icons/btnFaster.png</file>
         <file>icons/btnExit.png</file>
+        <file>icons/btnPlaylist.png</file>
     </qresource>
 </RCC>

@@ -1,7 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "playlistwindow.h"
 #include "videowidget.h"
-#include <QMediaPlayer>
 #include <QProgressBar>
 #include <QSlider>
 #include <QFileDialog>
@@ -25,8 +25,9 @@ MainWindow::MainWindow(QWidget *parent) :
     m_video_widget = new VideoWidget(this);
     m_player->setVideoOutput(m_video_widget);
     m_player->setVolume(50);
+    m_pls_window = new PlaylistWindow(m_player);
+    m_pls_window->hide();
     this->setCentralWidget(m_video_widget);
-
     m_current_play_time_label = new QLabel(this);
     m_seek_bar = new QProgressBar(this);
     m_seek_slider = new QSlider(this);
@@ -50,6 +51,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->statusBar->addPermanentWidget(m_volume_label);
     ui->statusBar->addPermanentWidget(m_volume_slider);
 
+    //connect(m_player, &QMediaPlayer::mediaStatusChanged, this, &MainWindow::statusChanged);
     connect(m_player, &QMediaPlayer::positionChanged, this, &MainWindow::update_seek_slider_value);
     connect(m_player, &QMediaPlayer::positionChanged, this, &MainWindow::update_time_labels);
     connect(m_seek_slider, &QSlider::sliderMoved, this, &MainWindow::update_player_pos);
@@ -63,26 +65,22 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(m_volume_slider, &QSlider::sliderMoved, m_player, &QMediaPlayer::setVolume);
     connect(m_volume_slider, &QSlider::valueChanged, m_player, &QMediaPlayer::setVolume);
     connect(m_volume_slider, &QSlider::valueChanged, this, &MainWindow::update_volume_label);
-    connect(m_video_widget, &VideoWidget::volumeLevelChanged, this, &MainWindow::change_volume_level);
+    connect(m_video_widget, &VideoWidget::volumeLevelChanged, this,
+            &MainWindow::change_volume_level);
+
+    connect(m_pls_window, &PlaylistWindow::current_movie_title_changed, this,
+            &MainWindow::update_title);
 }
 
 MainWindow::~MainWindow()
 {
+    delete m_pls_window;
     delete ui;
 }
 
 void MainWindow::on_actionOpen_triggered()
 {
-    auto dir = QStandardPaths::standardLocations(QStandardPaths::MoviesLocation)
-            .value(0, QDir::homePath());
-
-    QString fileName = QFileDialog::getOpenFileName(this, "Open a file", dir,
-                                                    "Video files (*.mp4 *.flv *\
-                                                    .avi *.mpeg);;All files (*.*)");
-    on_actionStop_triggered();
-    m_player->setMedia(QUrl::fromLocalFile(fileName));
-    on_actionPlay_triggered();
-    this->setWindowTitle(QString("TeMedia - ") + QString(fileName));
+    m_pls_window->add_to_playlist();
 }
 
 void MainWindow::on_actionPlay_triggered()
@@ -119,13 +117,9 @@ void MainWindow::update_volume_label(int curr_vol)
 void MainWindow::change_volume_level(int delta)
 {
     if(delta > 0)
-    {
-        m_volume_slider->setValue(m_volume_slider->value() + 2);
-    }
-    else
-    {
-        m_volume_slider->setValue(m_volume_slider->value() - 2);
-    }
+        m_volume_slider->setValue(m_volume_slider->value() + 1);
+    else if(delta < 0)
+        m_volume_slider->setValue(m_volume_slider->value() - 1);
 }
 
 void MainWindow::update_seek_slider_value(qint64 curr_player_pos)
@@ -136,17 +130,8 @@ void MainWindow::update_seek_slider_value(qint64 curr_player_pos)
 void MainWindow::update_player_pos(int seek_slider_pos)
 {
     auto p = m_player->duration() * seek_slider_pos / 100;
-    qDebug() << "new player pos = " << p;
     m_player->setPosition(p);
 }
-
-/*void MainWindow::update_player_pos2()
-{
-    auto p = m_player->duration() * m_seek_slider->value() / 100;
-    qDebug() << "new player pos = " << p;
-    m_player->setPosition(p);
-}*/
-
 
 void MainWindow::update_time_labels(int curr_player_pos)
 {
@@ -168,6 +153,12 @@ void MainWindow::update_time_labels(int curr_player_pos)
                                     .arg(QString::fromStdString(ss_total_dur.str())));
 }
 
+void MainWindow::update_title(QString newTitle)
+{
+    this->setWindowTitle("TeMedia [" + newTitle + "]");
+}
+
+
 void MainWindow::mouseReleaseEvent(QMouseEvent *event)
 {
     if(event->button() == Qt::MouseButton::MiddleButton)
@@ -182,10 +173,19 @@ void MainWindow::mouseReleaseEvent(QMouseEvent *event)
 
 void MainWindow::keyReleaseEvent(QKeyEvent *event)
 {
-    if(event->key() == Qt::Key_Space){
+    auto key = event->key();
+    if(key == Qt::Key_Space){
         on_actionPause_triggered();
     }
-    else if(event->key() == Qt::Key_F && !this->isFullScreen())
+    else if(key == Qt::Key_Left)
+    {
+        on_action_seek_backwards_triggered();
+    }
+    else if(key == Qt::Key_Right)
+    {
+        on_action_seek_forwards_triggered();
+    }
+    else if(key== Qt::Key_F && !this->isFullScreen())
     {
         m_video_widget->toggleFullScreenMode();
         event->accept();
@@ -197,8 +197,43 @@ void MainWindow::wheelEvent(QWheelEvent *event)
     change_volume_level(event->angleDelta().y());
 }
 
+void MainWindow::displayErrorMessage(const QString &msg)
+{
+    QMessageBox box;
+    box.setText(msg);
+    box.exec();
+}
+
 /*void MainWindow::resizeEvent(QResizeEvent *event)
 {
     qDebug() << "w = " << this->width() << " h = " << this->height();
     QMainWindow::resizeEvent(event);
 }*/
+
+void MainWindow::on_action_seek_forwards_triggered()
+{
+    m_player->setPosition(m_player->position() + 5000);
+}
+
+void MainWindow::on_action_seek_backwards_triggered()
+{
+    m_player->setPosition(m_player->position() - 5000);
+}
+
+void MainWindow::on_action_show_playlist_triggered()
+{
+    if(m_pls_window->isHidden())
+        m_pls_window->show();
+    else
+        m_pls_window->hide();
+}
+
+void MainWindow::on_action_prev_triggered()
+{
+    m_pls_window->prev_movie();
+}
+
+void MainWindow::on_action_next_triggered()
+{
+    m_pls_window->next_movie();
+}

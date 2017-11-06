@@ -14,12 +14,15 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-    videowidget.cpp
+    videowidget.cpp \
+    playlistwindow.cpp
 
 HEADERS  += mainwindow.h \
-    videowidget.h
+    videowidget.h \
+    playlistwindow.h
 
-FORMS    += mainwindow.ui
+FORMS    += mainwindow.ui \
+    playlistwindow.ui
 
 RESOURCES += \
     resources.qrc
