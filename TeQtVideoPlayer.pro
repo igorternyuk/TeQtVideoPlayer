@@ -15,11 +15,13 @@ DEFINES += DEBUG
 SOURCES += main.cpp\
         mainwindow.cpp \
     videowidget.cpp \
-    playlistwindow.cpp
+    playlistwindow.cpp \
+    settingsutil.cpp
 
 HEADERS  += mainwindow.h \
     videowidget.h \
-    playlistwindow.h
+    playlistwindow.h \
+    settingsutil.h
 
 FORMS    += mainwindow.ui \
     playlistwindow.ui

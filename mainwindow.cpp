@@ -2,6 +2,7 @@
 #include "ui_mainwindow.h"
 #include "playlistwindow.h"
 #include "videowidget.h"
+#include "settingsutil.h"
 
 #include <QProgressBar>
 #include <QSlider>
@@ -91,10 +92,13 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(m_pls_window, &PlaylistWindow::current_movie_title_changed, this,
             &MainWindow::update_title);
+
+    load_settings();
 }
 
 MainWindow::~MainWindow()
 {
+    save_settings();
     delete m_pls_window;
     delete ui;
 }
@@ -285,4 +289,42 @@ void MainWindow::on_action_prev_triggered()
 void MainWindow::on_action_next_triggered()
 {
     m_pls_window->next_movie();
+}
+
+void MainWindow::save_settings()
+{
+    saveParameter(SKEY_WINDOW_POS, pos(), SGROUP_WINDOW_GEOMETRY);
+    saveParameter(SKEY_WINDOW_SIZE, size(), SGROUP_WINDOW_GEOMETRY);
+    saveParameter(SKEY_CURR_PLAYLIST_ITEM, m_pls_window->getCurrentItemIndex(),
+                  SGROUP_PLAYLIST);
+    saveParameter(SKEY_PLAYER_POS, m_player->position(), SGROUP_PLAYER);
+    saveParameter(SKEY_IS_PLAYER_PAUSED,
+                  m_player->state() == QMediaPlayer::State::PausedState,
+                  SGROUP_PLAYER);
+}
+
+void MainWindow::load_settings()
+{
+    auto restoredPos = loadParameter(SKEY_WINDOW_POS, SGROUP_WINDOW_GEOMETRY,
+                                     pos()).value<QPoint>();
+    this->move(restoredPos);
+
+    auto restoredSize = loadParameter(SKEY_WINDOW_SIZE, SGROUP_WINDOW_GEOMETRY,
+                                      size()).value<QSize>();
+    this->resize(restoredSize);
+
+    int currPlaylistItemIndex = loadParameter(SKEY_CURR_PLAYLIST_ITEM,
+                                              SGROUP_PLAYLIST, 0).toInt();
+    this->m_pls_window->setCurrentItem(currPlaylistItemIndex);
+    this->m_pls_window->setCurrentItem(currPlaylistItemIndex);
+
+    auto playerPos = loadParameter(SKEY_PLAYER_POS, SGROUP_PLAYER, 0)
+            .toLongLong();
+    m_player->setPosition(playerPos);
+
+    auto isPlayerPaused = loadParameter(SKEY_IS_PLAYER_PAUSED, SGROUP_PLAYER,
+                                        true)
+                .toBool();
+    if(!isPlayerPaused)
+        m_player->play();
 }

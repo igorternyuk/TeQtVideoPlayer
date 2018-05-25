@@ -28,6 +28,9 @@ public slots:
     void prev_movie();
     void next_movie();
     void add_files_from_mime_data(const QMimeData *mimeData);
+    int getNumberOfItemsInPlaylist() const;
+    int getCurrentItemIndex() const;
+    void setCurrentItem(int index);
 
 protected:
     void closeEvent(QCloseEvent*) override;
@@ -48,8 +51,9 @@ private slots:
     void on_action_remove_selected_items_from_HDD_triggered();
     void on_action_clear_playlist_triggered();
     void add_to_playlist(QStringList &videos);
-
     void on_actionAdd_video_to_playlist_triggered();
+    void on_btnAddVideo_clicked();
+
 
 private:
     const QString mLastPlaylistFilePath{"currentPlaylist.dat"};

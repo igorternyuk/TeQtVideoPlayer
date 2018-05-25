@@ -46,7 +46,9 @@ PlaylistWindow::PlaylistWindow(QMediaPlayer *player, QWidget *parent) :
 
     //Connections
 
-    connect(ui->plsView, &QTableView::doubleClicked, [this](const QModelIndex &index){
+    connect(ui->plsView, &QTableView::doubleClicked,
+            [this](const QModelIndex &index)
+    {
         m_playlist->setCurrentIndex(index.row());
         ui->plsView->clearSelection();
         ui->plsView->selectRow(index.row());
@@ -54,8 +56,11 @@ PlaylistWindow::PlaylistWindow(QMediaPlayer *player, QWidget *parent) :
             m_player->play();
     });
 
-    connect(m_playlist, &QMediaPlaylist::currentIndexChanged, [this](int row){
-        auto title = m_playlist_model->data(m_playlist_model->index(row, 0)).toString();
+    connect(m_playlist, &QMediaPlaylist::currentIndexChanged,
+            [this](int row)
+    {
+        auto title = m_playlist_model->data(m_playlist_model->index(row, 0))
+                .toString();
         emit current_movie_title_changed(title);
     });
 
@@ -78,7 +83,6 @@ PlaylistWindow::PlaylistWindow(QMediaPlayer *player, QWidget *parent) :
 PlaylistWindow::~PlaylistWindow()
 {
     save_playlist_to_file(mLastPlaylistFilePath);
-    qDebug() << "Playlist window destructor was called";
     delete m_playlist;
     delete m_playlist_model;
     delete ui;
@@ -89,12 +93,22 @@ void PlaylistWindow::add_to_playlist()
     auto dir = QStandardPaths::standardLocations(QStandardPaths::MoviesLocation)
             .value(0, QDir::homePath());
 
-    QStringList videoFiles = QFileDialog::getOpenFileNames(this, "Open a tunes", dir,
+    QStringList selectedFiles = QFileDialog::getOpenFileNames(this, "Open a tunes", dir,
                                                       "Video files (*.mp4 *.avi *\
                                                       *.flv *.mpeg *.mpg *.3gp);;\
                                                       Audio files (*.mp3 *.ogg *\
                                                       *.wav);;All files (*.*)");
-    add_to_playlist(videoFiles);
+    QStringList extensions = {"mp4", "avi", "flv", "mpeg", "mpg", "3gp", "mp3",
+                            "wav", "ogg"};
+    QStringList videos;
+    for(auto path: selectedFiles)
+    {
+        QFileInfo fileInfo(path);
+        if(!fileInfo.isDir() && extensions.contains(fileInfo.suffix()))
+            videos << path;
+    }
+
+    add_to_playlist(videos);
 }
 
 void PlaylistWindow::add_to_playlist(QStringList &videos)
@@ -146,6 +160,23 @@ void PlaylistWindow::add_files_from_mime_data(const QMimeData *mimeData)
         }
     }
     add_to_playlist(videoFiles);
+}
+
+int PlaylistWindow::getNumberOfItemsInPlaylist() const
+{
+    return m_playlist_model->rowCount();
+}
+
+int PlaylistWindow::getCurrentItemIndex() const
+{
+    return m_playlist->currentIndex();
+}
+
+void PlaylistWindow::setCurrentItem(int index)
+{
+    m_playlist->setCurrentIndex(index);
+    m_current_index = index;
+    ui->plsView->selectRow(m_current_index);
 }
 
 void PlaylistWindow::closeEvent(QCloseEvent*)
@@ -251,7 +282,7 @@ void PlaylistWindow::load_choosen_playlist()
 {
     QString startLocation = QStandardPaths::standardLocations(
                 QStandardPaths::MoviesLocation).value(0, QDir::homePath());
-    QString filter = QString::fromStdString("Playlists (*.tpls);;All files (*.*)");
+    QString filter = QString::fromStdString("Playlists (*.tpls)");
     QString fileName = QFileDialog::getOpenFileName(
                 this,
                 QString::fromStdString("Open playlist"),
@@ -394,3 +425,9 @@ void PlaylistWindow::on_actionAdd_video_to_playlist_triggered()
 {
     this->add_to_playlist();
 }
+
+void PlaylistWindow::on_btnAddVideo_clicked()
+{
+    this->add_to_playlist();
+}
+
