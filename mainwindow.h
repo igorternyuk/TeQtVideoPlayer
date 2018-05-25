@@ -28,6 +28,10 @@ protected:
     void mouseReleaseEvent(QMouseEvent *event) override;
     void keyReleaseEvent(QKeyEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
+    void dragEnterEvent(QDragEnterEvent *event);
+    void dragLeaveEvent(QDragLeaveEvent *event);
+    void dragMoveEvent(QDragMoveEvent *event);
+    void dropEvent(QDropEvent *event);
     //void resizeEvent(QResizeEvent *event) override;
 
 private:

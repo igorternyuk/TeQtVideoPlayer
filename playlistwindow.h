@@ -11,6 +11,7 @@ namespace Ui
 class QMediaPlayer;
 class QStandardItemModel;
 class QMediaPlaylist;
+class QMimeData;
 
 class PlaylistWindow : public QWidget
 {
@@ -26,10 +27,15 @@ public slots:
     void add_to_playlist();
     void prev_movie();
     void next_movie();
+    void add_files_from_mime_data(const QMimeData *mimeData);
 
 protected:
     void closeEvent(QCloseEvent*) override;
     void keyReleaseEvent(QKeyEvent *event) override;
+    void dragEnterEvent(QDragEnterEvent *event) override;
+    void dragLeaveEvent(QDragLeaveEvent *event) override;
+    void dragMoveEvent(QDragMoveEvent *event) override;
+    void dropEvent(QDropEvent *event) override;
 
 private slots:
     void on_btnHide_clicked();
@@ -41,6 +47,9 @@ private slots:
     void on_action_remove_selected_items_from_playlist_triggered();
     void on_action_remove_selected_items_from_HDD_triggered();
     void on_action_clear_playlist_triggered();
+    void add_to_playlist(QStringList &videos);
+
+    void on_actionAdd_video_to_playlist_triggered();
 
 private:
     const QString mLastPlaylistFilePath{"currentPlaylist.dat"};

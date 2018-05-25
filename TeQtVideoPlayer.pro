@@ -10,7 +10,7 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 CONFIG += c++1z
 TARGET = TeQtVideoPlayer
 TEMPLATE = app
-
+DEFINES += DEBUG
 
 SOURCES += main.cpp\
         mainwindow.cpp \

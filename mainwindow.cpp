@@ -2,6 +2,7 @@
 #include "ui_mainwindow.h"
 #include "playlistwindow.h"
 #include "videowidget.h"
+
 #include <QProgressBar>
 #include <QSlider>
 #include <QFileDialog>
@@ -10,7 +11,17 @@
 #include <QKeyEvent>
 #include <QStringList>
 #include <QStandardPaths>
+#include <QFile>
+#include <QFileInfo>
+#include <QMimeData>
+#include <QDragEnterEvent>
+#include <QDragLeaveEvent>
+#include <QDragMoveEvent>
+#include <QDropEvent>
+#ifdef DEBUG
 #include <QDebug>
+#endif
+
 #include <sstream>
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -18,6 +29,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    setAcceptDrops(true);
     this->setWindowTitle("TeMedia");
     this->setMinimumSize(QSize(WINDOW_WIDTH_MIN, WINDOW_HEIGHT_MIN));
 
@@ -52,19 +64,28 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->statusBar->addPermanentWidget(m_volume_slider);
 
     //connect(m_player, &QMediaPlayer::mediaStatusChanged, this, &MainWindow::statusChanged);
-    connect(m_player, &QMediaPlayer::positionChanged, this, &MainWindow::update_seek_slider_value);
-    connect(m_player, &QMediaPlayer::positionChanged, this, &MainWindow::update_time_labels);
-    connect(m_seek_slider, &QSlider::sliderMoved, this, &MainWindow::update_player_pos);
+    connect(m_player, &QMediaPlayer::positionChanged, this,
+            &MainWindow::update_seek_slider_value);
+    connect(m_player, &QMediaPlayer::positionChanged, this,
+            &MainWindow::update_time_labels);
+    connect(m_seek_slider, &QSlider::sliderMoved, this,
+            &MainWindow::update_player_pos);
     //connect(m_seek_slider, &QSlider::valueChanged, this, &MainWindow::update_player_pos);
     //connect(m_seek_slider, &QSlider::sliderPressed, this, &MainWindow::update_player_pos2);
-    connect(m_player, &QMediaPlayer::durationChanged, m_seek_bar, &QProgressBar::setMaximum);
-    connect(m_player, &QMediaPlayer::positionChanged, m_seek_bar, &QProgressBar::setValue);
+    connect(m_player, &QMediaPlayer::durationChanged, m_seek_bar,
+            &QProgressBar::setMaximum);
+    connect(m_player, &QMediaPlayer::positionChanged, m_seek_bar,
+            &QProgressBar::setValue);
     connect(m_video_widget, &VideoWidget::pauseRequestInFullscreenMode,
             this, &MainWindow::on_actionPause_triggered);
-    connect(m_player, &QMediaPlayer::volumeChanged, m_volume_slider, &QSlider::setValue);
-    connect(m_volume_slider, &QSlider::sliderMoved, m_player, &QMediaPlayer::setVolume);
-    connect(m_volume_slider, &QSlider::valueChanged, m_player, &QMediaPlayer::setVolume);
-    connect(m_volume_slider, &QSlider::valueChanged, this, &MainWindow::update_volume_label);
+    connect(m_player, &QMediaPlayer::volumeChanged, m_volume_slider,
+            &QSlider::setValue);
+    connect(m_volume_slider, &QSlider::sliderMoved, m_player,
+            &QMediaPlayer::setVolume);
+    connect(m_volume_slider, &QSlider::valueChanged, m_player,
+            &QMediaPlayer::setVolume);
+    connect(m_volume_slider, &QSlider::valueChanged, this,
+            &MainWindow::update_volume_label);
     connect(m_video_widget, &VideoWidget::volumeLevelChanged, this,
             &MainWindow::change_volume_level);
 
@@ -111,7 +132,8 @@ void MainWindow::on_actionStop_triggered()
 
 void MainWindow::update_volume_label(int curr_vol)
 {
-    m_volume_label->setText(QString("Volume:") + QString::number(curr_vol) + QString("%"));
+    m_volume_label->setText(QString("Volume:") + QString::number(curr_vol) +
+                            QString("%"));
 }
 
 void MainWindow::change_volume_level(int delta)
@@ -124,7 +146,8 @@ void MainWindow::change_volume_level(int delta)
 
 void MainWindow::update_seek_slider_value(qint64 curr_player_pos)
 {
-     m_seek_slider->setValue((int)((float)curr_player_pos / m_player->duration() * 100));
+     m_seek_slider->setValue((int)((float)curr_player_pos /
+                                   m_player->duration() * 100));
 }
 
 void MainWindow::update_player_pos(int seek_slider_pos)
@@ -141,16 +164,21 @@ void MainWindow::update_time_labels(int curr_player_pos)
         (curr_pos % 3600) % 60 << "s";
     auto total_duration = m_player->duration() / 1000;
     std::stringstream ss_total_dur;
-    ss_total_dur << total_duration / 3600 << "h:" << (total_duration % 3600) / 60 << "m:" <<
-        (total_duration % 3600) % 60 << "s";
+    ss_total_dur << total_duration / 3600 << "h:" <<
+                    (total_duration % 3600) / 60 << "m:" <<
+                    (total_duration % 3600) % 60 << "s";
     auto remaining_time = total_duration - curr_pos;
     std::stringstream ss_remains;
-    ss_remains << remaining_time / 3600 << "h:" << (remaining_time % 3600) / 60 << "m:" <<
-        (remaining_time % 3600) % 60 << "s";
-    m_current_play_time_label->setText(QString::fromStdString(ss_curr_pos.str()));
+    ss_remains << remaining_time / 3600 << "h:" <<
+                  (remaining_time % 3600) / 60 << "m:" <<
+                  (remaining_time % 3600) % 60 << "s";
+    m_current_play_time_label->setText(QString::fromStdString
+                                       (ss_curr_pos.str()));
     m_remaining_time_label->setText(QString("Remains:%1/(Total:%2)")
-                                    .arg(QString::fromStdString(ss_remains.str()))
-                                    .arg(QString::fromStdString(ss_total_dur.str())));
+                                    .arg(QString::fromStdString(
+                                             ss_remains.str()))
+                                    .arg(QString::fromStdString(
+                                             ss_total_dur.str())));
 }
 
 void MainWindow::update_title(QString newTitle)
@@ -196,6 +224,27 @@ void MainWindow::wheelEvent(QWheelEvent *event)
 {
     change_volume_level(event->angleDelta().y());
 }
+
+void MainWindow::dragEnterEvent(QDragEnterEvent *event)
+{
+    event->accept();
+}
+
+void MainWindow::dragLeaveEvent(QDragLeaveEvent *event)
+{
+    event->accept();
+}
+
+void MainWindow::dragMoveEvent(QDragMoveEvent *event)
+{
+    event->accept();
+}
+
+void MainWindow::dropEvent(QDropEvent *event)
+{
+    m_pls_window->add_files_from_mime_data(event->mimeData());
+}
+
 
 void MainWindow::displayErrorMessage(const QString &msg)
 {

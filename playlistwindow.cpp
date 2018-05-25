@@ -13,14 +13,24 @@
 #include <QStandardPaths>
 #include <QTextStream>
 #include <QMessageBox>
+#include <QFile>
+#include <QFileInfo>
+#include <QMimeData>
+#include <QDragEnterEvent>
+#include <QDragLeaveEvent>
+#include <QDragMoveEvent>
+#include <QDropEvent>
 #include <QCloseEvent>
+#ifndef DEBUG
 #include <QDebug>
+#endif
 
 PlaylistWindow::PlaylistWindow(QMediaPlayer *player, QWidget *parent) :
     QWidget(parent), ui(new Ui::PlaylistWindow),
     m_player{player}
 {
     ui->setupUi(this);
+    setAcceptDrops(true);
     this->setWindowTitle("PlayList");
     m_playlist_model = new QStandardItemModel(this);
     ui->plsView->setModel(m_playlist_model);
@@ -29,6 +39,7 @@ PlaylistWindow::PlaylistWindow(QMediaPlayer *player, QWidget *parent) :
     m_player->setPlaylist(m_playlist);
     configure_playlist_view();
     ui->plsView->setContextMenuPolicy(Qt::ContextMenuPolicy::ActionsContextMenu);
+    ui->plsView->addAction(ui->actionAdd_video_to_playlist);
     ui->plsView->addAction(ui->action_remove_selected_items_from_playlist);
     ui->plsView->addAction(ui->action_clear_playlist);
     ui->plsView->addAction(ui->action_remove_selected_items_from_HDD);
@@ -78,18 +89,23 @@ void PlaylistWindow::add_to_playlist()
     auto dir = QStandardPaths::standardLocations(QStandardPaths::MoviesLocation)
             .value(0, QDir::homePath());
 
-    QStringList tunes = QFileDialog::getOpenFileNames(this, "Open a tunes", dir,
+    QStringList videoFiles = QFileDialog::getOpenFileNames(this, "Open a tunes", dir,
                                                       "Video files (*.mp4 *.avi *\
-                                                      *.flv *.mpeg *.mpg);;Audio \
-                                                      files (*.mp3 *.ogg *\
+                                                      *.flv *.mpeg *.mpg *.3gp);;\
+                                                      Audio files (*.mp3 *.ogg *\
                                                       *.wav);;All files (*.*)");
-    for(const auto &tune: tunes)
+    add_to_playlist(videoFiles);
+}
+
+void PlaylistWindow::add_to_playlist(QStringList &videos)
+{
+    for(const auto &video: videos)
     {
         QList<QStandardItem*> items;
-        items.append(new QStandardItem(QDir(tune).dirName()));
-        items.append(new QStandardItem(tune));
+        items.append(new QStandardItem(QDir(video).dirName()));
+        items.append(new QStandardItem(video));
         m_playlist_model->appendRow(items);
-        m_playlist->addMedia(QUrl::fromLocalFile(tune));
+        m_playlist->addMedia(QUrl::fromLocalFile(video));
     }
     configure_playlist_view();
     if(m_player->state() != QMediaPlayer::PlayingState)
@@ -110,6 +126,26 @@ void PlaylistWindow::next_movie()
     auto index = m_playlist->currentIndex();
     ui->plsView->clearSelection();
     ui->plsView->selectRow(index);
+}
+
+void PlaylistWindow::add_files_from_mime_data(const QMimeData *mimeData)
+{
+    if(!mimeData) return;
+    QStringList extensions = {"mp4", "avi", "flv", "mpeg", "mpg", "3gp", "mp3",
+                              "wav", "ogg"};
+    auto urls = mimeData->urls();
+    QStringList videoFiles;
+    for(auto url: urls)
+    {
+        if(url.isLocalFile())
+        {
+            auto file = url.toLocalFile();
+            QFileInfo info(file);
+            if(!info.isDir() && extensions.contains(info.suffix()))
+                videoFiles << url.toLocalFile();
+        }
+    }
+    add_to_playlist(videoFiles);
 }
 
 void PlaylistWindow::closeEvent(QCloseEvent*)
@@ -172,6 +208,40 @@ void PlaylistWindow::keyReleaseEvent(QKeyEvent *event)
     }
 }
 
+void PlaylistWindow::dragEnterEvent(QDragEnterEvent *event)
+{
+    event->accept();
+}
+
+void PlaylistWindow::dragLeaveEvent(QDragLeaveEvent *event)
+{
+    event->accept();
+}
+
+void PlaylistWindow::dragMoveEvent(QDragMoveEvent *event)
+{
+    event->accept();
+}
+
+void PlaylistWindow::dropEvent(QDropEvent *event)
+{
+    QStringList extensions = {"mp4", "avi", "flv", "mpeg", "mpg", "3gp"};
+    auto data = event->mimeData();
+    auto urls = data->urls();
+    QStringList videoFiles;
+    for(auto url: urls)
+    {
+        if(url.isLocalFile())
+        {
+            auto file = url.toLocalFile();
+            QFileInfo info(file);
+            if(!info.isDir() && extensions.contains(info.suffix()))
+                videoFiles << url.toLocalFile();
+        }
+    }
+    add_to_playlist(videoFiles);
+}
+
 void PlaylistWindow::on_btnHide_clicked()
 {
     this->hide();
@@ -198,7 +268,7 @@ void PlaylistWindow::save_playlist_as()
                 this,
                 QString::fromStdString("Save playlist to file..."),
                 startLocation,
-                QString::fromStdString("Playlists (*.tpls);;All files (*.*)"));
+                QString::fromStdString("Playlists (*.tpls)"));
     if(!fileName.contains(".tpls"))
         fileName += QString(".tpls");
     save_playlist_to_file(fileName);
@@ -259,16 +329,13 @@ bool PlaylistWindow::load_playlist_from_file(const QString &filePath)
     }
     QTextStream stream(&file);
     while (!stream.atEnd()) {
-        QString tuneData = stream.readLine();
-        QList campos = tuneData.split("*");
+        QString videoName = stream.readLine();
+        QString videoPath = stream.readLine();
         QList<QStandardItem*> list;
-        for(const auto &campo: campos)
-        {
-            list.append(new QStandardItem(campo));
-        }
+        list.append(new QStandardItem(videoName));
+        list.append(new QStandardItem(videoPath));
         m_playlist_model->appendRow(list);
-        m_playlist->addMedia(QUrl::fromLocalFile(campos.at(1)));
-
+        m_playlist->addMedia(QUrl::fromLocalFile(videoPath));
     }
     file.close();
     configure_playlist_view();
@@ -284,9 +351,9 @@ bool PlaylistWindow::save_playlist_to_file(const QString &filePath)
         return false;
     }
     QTextStream stream(&file);
-    for(int row{1}; row < m_playlist_model->rowCount(); ++row)
+    for(int row{0}; row < m_playlist_model->rowCount(); ++row)
     {
-        stream << m_playlist_model->item(row, 0)->text() << "*" <<
+        stream << m_playlist_model->item(row, 0)->text() << "\n" <<
                 m_playlist_model->item(row, 1)->text() << endl;
     }
     file.close();
@@ -321,4 +388,9 @@ void PlaylistWindow::on_action_remove_selected_items_from_HDD_triggered()
 void PlaylistWindow::on_action_clear_playlist_triggered()
 {
     this->clear_playlist();
+}
+
+void PlaylistWindow::on_actionAdd_video_to_playlist_triggered()
+{
+    this->add_to_playlist();
 }

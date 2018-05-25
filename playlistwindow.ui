@@ -79,6 +79,11 @@
     <string>Clear playlist</string>
    </property>
   </action>
+  <action name="actionAdd_video_to_playlist">
+   <property name="text">
+    <string>Add video to playlist</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections/>
